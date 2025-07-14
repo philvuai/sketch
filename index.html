@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architectural Sketch Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Architectural Sketch Generator</h1>
+            <p>Transform architectural styles for bid writing</p>
+        </header>
+
+        <main>
+            <div class="upload-section">
+                <h2>Step 1: Upload Reference Image</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <svg class="upload-icon" viewBox="0 0 24 24">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                        </svg>
+                        <p>Click to upload or drag and drop</p>
+                        <p class="file-types">Supports JPG, PNG, GIF, WebP</p>
+                    </div>
+                    <input type="file" id="imageInput" accept="image/*" hidden>
+                </div>
+                <div class="image-preview" id="imagePreview"></div>
+            </div>
+
+            <div class="output-section">
+                <h2>Step 2: Select Output Type</h2>
+                <select id="outputType" class="output-select">
+                    <option value="">Choose building type...</option>
+                    <option value="affordable-housing">Affordable Housing</option>
+                    <option value="flat">Flat/Apartment</option>
+                    <option value="communal-space">Communal Space</option>
+                    <option value="detached-house">Detached House</option>
+                    <option value="terraced-house">Terraced House</option>
+                    <option value="commercial-building">Commercial Building</option>
+                    <option value="mixed-use">Mixed Use Development</option>
+                </select>
+            </div>
+
+            <div class="generate-section">
+                <button id="generateBtn" class="generate-btn" disabled>
+                    <span class="btn-text">Generate Sketch</span>
+                    <div class="loader" id="loader"></div>
+                </button>
+            </div>
+
+            <div class="result-section" id="resultSection">
+                <h2>Generated Sketch</h2>
+                <div class="result-container">
+                    <div class="result-image" id="resultImage"></div>
+                    <div class="result-actions">
+                        <button id="downloadBtn" class="action-btn">Download Sketch</button>
+                        <button id="regenerateBtn" class="action-btn secondary">Regenerate</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 Architectural Sketch Generator. Powered by OpenAI.</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
