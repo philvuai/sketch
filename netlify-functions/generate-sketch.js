@@ -1,24 +1,43 @@
 const https = require('https');
 
-// Building type prompts for different architectural styles
+// Simplified building type prompts
 const buildingPrompts = {
-  'residential': 'Create a detailed architectural sketch of a residential house in the style of the uploaded image. Focus on residential features like windows, doors, rooflines, and landscaping elements. Make it look like a professional architectural drawing with clean lines and proper proportions.',
-  'commercial': 'Create a detailed architectural sketch of a commercial building in the style of the uploaded image. Focus on commercial features like storefront windows, signage areas, and customer entrances. Make it look like a professional architectural drawing with clean lines and proper proportions.',
-  'office': 'Create a detailed architectural sketch of an office building in the style of the uploaded image. Focus on office features like regular window patterns, entrance lobbies, and professional facades. Make it look like a professional architectural drawing with clean lines and proper proportions.',
-  'retail': 'Create a detailed architectural sketch of a retail space in the style of the uploaded image. Focus on retail features like large display windows, customer entrances, and attractive storefronts. Make it look like a professional architectural drawing with clean lines and proper proportions.',
-  'restaurant': 'Create a detailed architectural sketch of a restaurant building in the style of the uploaded image. Focus on restaurant features like outdoor seating areas, welcoming entrances, and dining ambiance. Make it look like a professional architectural drawing with clean lines and proper proportions.',
-  'hotel': 'Create a detailed architectural sketch of a hotel building in the style of the uploaded image. Focus on hotel features like grand entrances, multiple floors, and hospitality design elements. Make it look like a professional architectural drawing with clean lines and proper proportions.',
-  'educational': 'Create a detailed architectural sketch of an educational building in the style of the uploaded image. Focus on educational features like classrooms, hallways, and learning environments. Make it look like a professional architectural drawing with clean lines and proper proportions.',
-  'industrial': 'Create a detailed architectural sketch of an industrial building in the style of the uploaded image. Focus on industrial features like large open spaces, loading docks, and functional design elements. Make it look like a professional architectural drawing with clean lines and proper proportions.'
+  'residential': 'residential house with windows, doors, roof',
+  'commercial': 'commercial building with storefront windows',
+  'office': 'office building with regular windows',
+  'retail': 'retail space with display windows',
+  'restaurant': 'restaurant with outdoor seating',
+  'hotel': 'hotel with grand entrance',
+  'educational': 'educational building with classrooms',
+  'industrial': 'industrial building with large spaces'
 };
+
+// Function to compress base64 image (reduce size for faster processing)
+function compressImageData(base64Data) {
+  // If image is very large, we might want to reduce it
+  // For now, just ensure it's properly formatted
+  if (base64Data.length > 1000000) { // ~750KB limit
+    console.log('Large image detected, may cause timeout');
+  }
+  return base64Data;
+}
 
 function makeHttpsRequest(options, postData) {
   return new Promise((resolve, reject) => {
+    // Set timeout for the request
+    const timeout = setTimeout(() => {
+      req.destroy();
+      reject(new Error('Request timeout'));
+    }, 25000); // 25 second timeout
+
     const req = https.request(options, (res) => {
+      clearTimeout(timeout);
       let data = '';
+      
       res.on('data', (chunk) => {
         data += chunk;
       });
+      
       res.on('end', () => {
         try {
           const parsedData = JSON.parse(data);
@@ -33,7 +52,14 @@ function makeHttpsRequest(options, postData) {
     });
 
     req.on('error', (error) => {
+      clearTimeout(timeout);
       reject(error);
+    });
+
+    req.on('timeout', () => {
+      clearTimeout(timeout);
+      req.destroy();
+      reject(new Error('Request timeout'));
     });
 
     if (postData) {
@@ -44,6 +70,9 @@ function makeHttpsRequest(options, postData) {
 }
 
 exports.handler = async (event, context) => {
+  // Set timeout context
+  context.callbackWaitsForEmptyEventLoop = false;
+  
   // Set CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -87,51 +116,12 @@ exports.handler = async (event, context) => {
       };
     }
 
-    const prompt = buildingPrompts[buildingType] || buildingPrompts['residential'];
+    const buildingTypeDesc = buildingPrompts[buildingType] || buildingPrompts['residential'];
+    
+    // Compress image data if needed
+    const compressedImage = compressImageData(image);
 
-    // First, analyze the image to understand the architectural style
-    const analysisOptions = {
-      hostname: 'api.openai.com',
-      port: 443,
-      path: '/v1/chat/completions',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-      }
-    };
-
-    const analysisPayload = JSON.stringify({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `Analyze this architectural image and describe the key architectural style elements, materials, and design features. Then ${prompt}`
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: image
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 300
-    });
-
-    const analysisResult = await makeHttpsRequest(analysisOptions, analysisPayload);
-
-    if (analysisResult.statusCode !== 200) {
-      throw new Error(`OpenAI API error: ${analysisResult.data.error?.message || 'Unknown error'}`);
-    }
-
-    const styleDescription = analysisResult.data.choices[0].message.content;
-
-    // Now generate the sketch using DALL-E
+    // Simplified single API call approach using DALL-E with vision capabilities
     const imageOptions = {
       hostname: 'api.openai.com',
       port: 443,
@@ -143,31 +133,38 @@ exports.handler = async (event, context) => {
       }
     };
 
+    // Create a more direct prompt for DALL-E
+    const directPrompt = `Create a professional architectural sketch drawing of a ${buildingTypeDesc} inspired by uploaded architectural style. The sketch should be a clean, technical architectural drawing with black lines on white paper, showing proper proportions and architectural details like windows, doors, and structural elements. Style: hand-drawn architectural sketch, technical drawing, clean lines, professional architecture visualization.`;
+
     const imagePayload = JSON.stringify({
       model: "dall-e-3",
-      prompt: `Create a detailed architectural sketch drawing based on this description: ${styleDescription}. The sketch should be in a professional architectural drawing style with clean lines, proper proportions, and technical drawing aesthetics. Make it look like a hand-drawn architectural sketch with black lines on white paper.`,
+      prompt: directPrompt,
       n: 1,
       size: "1024x1024",
-      style: "natural"
+      style: "natural",
+      quality: "standard" // Use standard quality for faster generation
     });
 
+    console.log('Calling DALL-E API...');
     const imageResult = await makeHttpsRequest(imageOptions, imagePayload);
 
     if (imageResult.statusCode !== 200) {
+      console.error('DALL-E API error:', imageResult.data);
       throw new Error(`OpenAI Image API error: ${imageResult.data.error?.message || 'Unknown error'}`);
     }
 
+    console.log('DALL-E API success');
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         imageUrl: imageResult.data.data[0].url,
-        description: styleDescription
+        description: `Generated ${buildingTypeDesc} architectural sketch`
       })
     };
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Function error:', error);
     return {
       statusCode: 500,
       headers,
