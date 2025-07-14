@@ -1,0 +1,16 @@
+{
+  "name": "architectural-sketch-generator",
+  "version": "1.0.0",
+  "description": "AI-powered architectural sketch generator",
+  "main": "index.js",
+  "scripts": {
+    "build": "netlify-lambda build netlify-functions",
+    "dev": "netlify-lambda serve netlify-functions"
+  },
+  "keywords": ["architecture", "ai", "sketch", "openai", "netlify"],
+  "author": "Phil Webb",
+  "license": "MIT",
+  "devDependencies": {
+    "netlify-lambda": "^2.0.15"
+  }
+}
