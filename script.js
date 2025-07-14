@@ -44,24 +44,27 @@ document.addEventListener('DOMContentLoaded', function () {
         const outputSelected = outputType.value;
 
         try {
-            const response = await fetch('https://api.openai.com/v1/images/sketch', {
+            const response = await fetch('/.netlify/functions/generate-sketch', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer YOUR_OPENAI_API_KEY`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     image: imageData,
-                    type: outputSelected
+                    buildingType: outputSelected
                 })
             });
 
-            if (!response.ok) throw new Error('Failed to generate sketch.');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate sketch.');
+            }
 
             const result = await response.json();
-            resultImage.innerHTML = `<img src="${result.data.sketchUrl}" alt="Generated Sketch" class="result-image-display" />`;
+            resultImage.innerHTML = `<img src="${result.imageUrl}" alt="Generated Sketch" class="result-image-display" />`;
             resultSection.style.display = 'block';
         } catch (error) {
+            console.error('Error generating sketch:', error);
             alert('Error: ' + error.message);
         } finally {
             loader.style.display = 'none';
